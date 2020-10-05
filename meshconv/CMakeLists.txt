@@ -1,15 +1,18 @@
-include(${SOFA_CMAKE_DIR}/preProject.cmake)
+cmake_minimum_required(VERSION 3.12)
+
+project(meshconv)
+
+find_package(MiniFlowVR REQUIRED)
 
 set(SOURCE_FILES
-
     meshconv.cpp
     tesselate.cpp
-
     )
 
 add_executable(${PROJECT_NAME} ${SOURCE_FILES})
 
-AddLinkerDependencies(SofaComponentMain )
+target_link_libraries(${PROJECT_NAME} miniFlowVR)
 
-include(${SOFA_CMAKE_DIR}/postProject.cmake)
+install(TARGETS meshconv
+        RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 

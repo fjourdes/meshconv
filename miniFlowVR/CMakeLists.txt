@@ -1,20 +1,7 @@
-cmake_minimum_required(VERSION 2.8.12)
+cmake_minimum_required(VERSION 3.12)
+
 project(miniFlowVR)
 
-
-set(MINIFLOWVR_BUILD_LIB_DIR ${CMAKE_CURRENT_BINARY_DIR}/lib)
-set(MINIFLOWVR_BUILD_BIN_DIR ${CMAKE_CURRENT_BINARY_DIR}/bin)
-set(MINIFLOWVR_BUILD_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
-set(MINIFLOWVR_BUILD_CMAKE_DIR ${CMAKE_BINARY_DIR}/MiniFlowVR/)
-
-
-# Offer the user the choice of overriding the installation directories
-set(MINIFLOWVR_INSTALL_LIB_DIR     ${CMAKE_INSTALL_LIBDIR}     CACHE PATH "Installation directory for libraries")
-set(MINIFLOWVR_INSTALL_BIN_DIR     ${CMAKE_INSTALL_BINDIR}     CACHE PATH "Installation directory for executables")
-set(MINIFLOWVR_INSTALL_INCLUDE_DIR ${CMAKE_INSTALL_INCLUDEDIR} CACHE PATH "Installation directory for header files")
-set(MINIFLOWVR_INSTALL_CMAKE_DIR   ${MINIFLOWVR_INSTALL_LIB_DIR}/cmake/MiniFlowVR )
-
-find_package(Boost REQUIRED)
 
 set(HEADER_FILES
 
@@ -51,10 +38,9 @@ set(SOURCE_FILES
 	)
  
 add_library(${PROJECT_NAME} STATIC ${HEADER_FILES} ${SOURCE_FILES})
-target_include_directories(${PROJECT_NAME} PUBLIC "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>")
-target_include_directories(${PROJECT_NAME} PUBLIC "$<BUILD_INTERFACE:${Boost_INCLUDE_DIRS}>")
-target_include_directories(${PROJECT_NAME} PUBLIC "$<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>")
-target_include_directories(${PROJECT_NAME} PUBLIC "$<INSTALL_INTERFACE:${MINIFLOWVR_INSTALL_INCLUDE_DIR}>")
+target_include_directories(${PROJECT_NAME} PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>)
+target_include_directories(${PROJECT_NAME} PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>)
+target_include_directories(${PROJECT_NAME} PUBLIC $<INSTALL_INTERFACE:include>)
 
 # The code must be relocatable if we want to link a shared library against it
 if(${CMAKE_CXX_COMPILER_ID} STREQUAL "GNU"
@@ -67,52 +53,47 @@ set(MINI_FLOWVR TRUE)
 configure_file( ${CMAKE_CURRENT_SOURCE_DIR}/MiniFlowVR.h.in
                 ${CMAKE_CURRENT_BINARY_DIR}/MiniFlowVR.h )
 install( FILES ${CMAKE_CURRENT_BINARY_DIR}/MiniFlowVR.h
-         DESTINATION "${MINIFLOWVR_INSTALL_INCLUDE_DIR}/miniFlowVR")
+        DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}")
 
-set_target_properties( ${PROJECT_NAME} PROPERTIES DEBUG_POSTFIX "_d" )
-# set_target_properties( ${PROJECT_NAME} PROPERTIES VERSION ${MINIFLOWVR_VERSION} )
-if(NOT SOFA_INSTALL_HEADERS_GENERATED_ONLY)
-set_target_properties( ${PROJECT_NAME} PROPERTIES PUBLIC_HEADER "${HEADER_FILES}" )
-endif()
+foreach ( file ${HEADER_FILES} )
+    get_filename_component( dir ${file} DIRECTORY )
+    # use CMAKE_INSTALL_PREFIX instead of CMAKE_INSTALL_INCLUDEDIR since
+    # each file has already a parent directory named "include"
+    install( FILES ${file} DESTINATION ${CMAKE_INSTALL_PREFIX}/${dir} )
+endforeach()
+
 
 install(TARGETS miniFlowVR
         EXPORT  MiniFlowVRTargets
-        RUNTIME DESTINATION "${MINIFLOWVR_INSTALL_BIN_DIR}" 
-        LIBRARY DESTINATION "${MINIFLOWVR_INSTALL_LIB_DIR}" 
-        ARCHIVE DESTINATION "${MINIFLOWVR_INSTALL_LIB_DIR}" 
-        PUBLIC_HEADER DESTINATION "${MINIFLOWVR_INSTALL_INCLUDE_DIR}/${PROJECT_NAME}" )
+        RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}"
+        LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}"
+        ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}"
+        )
+
 include(CMakePackageConfigHelpers)
 
 # MiniFlowVRConfigVersion.cmake file (same for build tree and intall)
 # write_basic_package_version_file(${MINIFLOWVR_BUILD_CMAKE_DIR}/MiniFlowVRConfigVersion.cmake
                                  # VERSION ${MINIFLOWVR_VERSION}
                                  # COMPATIBILITY AnyNewerVersion)
-                                
+
 # install(FILES ${MINIFLOWVR_BUILD_CMAKE_DIR}/MiniFlowVRConfigVersion.cmake
         # DESTINATION ${MINIFLOWVR_INSTALL_CMAKE_DIR})
 
 
-# MiniFlowVRConfig.cmake (build tree)
-set(MINIFLOWVR_INCLUDE_DIR "${MINIFLOWVR_BUILD_INCLUDE_DIR}")
-configure_package_config_file(MiniFlowVRConfig.cmake.in 
-                              ${MINIFLOWVR_BUILD_CMAKE_DIR}/MiniFlowVRConfig.cmake
-                              INSTALL_DESTINATION ${MINIFLOWVR_BUILD_CMAKE_DIR}
-                              INSTALL_PREFIX ${CMAKE_BINARY_DIR}
-                              PATH_VARS MINIFLOWVR_INCLUDE_DIR )
+configure_package_config_file(MiniFlowVRConfig.cmake.in
+                            ${CMAKE_CURRENT_BINARY_DIR}/MiniFlowVRConfig.cmake
+                            INSTALL_DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/MiniFlowVR"
+)
 
-# MiniFlowVRConfig.cmake (installed)
-set(MINIFLOWVR_INCLUDE_DIR "${MINIFLOWVR_INSTALL_INCLUDE_DIR}")
-configure_package_config_file(MiniFlowVRConfig.cmake.in 
-                              ${MINIFLOWVR_BUILD_CMAKE_DIR}/MiniFlowVRConfigInstall.cmake
-                              INSTALL_DESTINATION ${MINIFLOWVR_INSTALL_CMAKE_DIR}
-                              PATH_VARS MINIFLOWVR_INCLUDE_DIR )
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/MiniFlowVRConfig.cmake
+    DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/MiniFlowVR")
 
-install(FILES ${MINIFLOWVR_BUILD_CMAKE_DIR}/MiniFlowVRConfigInstall.cmake
-        DESTINATION ${MINIFLOWVR_INSTALL_CMAKE_DIR}
-        RENAME MiniFlowVRConfig.cmake)
-	   
 # MiniFlowVRTargets.cmake (installed)
 install(EXPORT MiniFlowVRTargets
-        DESTINATION ${MINIFLOWVR_INSTALL_CMAKE_DIR})
-        
+        NAMESPACE MiniFlowVR::
+        DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/MiniFlowVR")
+
+# alias library so that it can always be consumed with the target name MiniFlowVR::miniFlowVR
+add_library(MiniFlowVR::miniFlowVR ALIAS miniFlowVR)
 

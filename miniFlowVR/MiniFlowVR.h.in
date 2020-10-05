@@ -30,4 +30,7 @@
 
 #cmakedefine MINI_FLOWVR
 
+#define FLOWVR_STATIC_ASSERT(x) \
+    static_assert(x , "")
+
 #endif // FLOWVR_MINIFLOWVR_H
